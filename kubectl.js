@@ -31,12 +31,26 @@ class BaseKubectl {
 export class Kubectl extends BaseKubectl {
 
     /**
+     * Build the env overlay that points kubectl at the given kubeconfig file(s).
+     *
+     * @param {String|null|undefined} kubeconfig - colon-separated KUBECONFIG value
+     * @returns {Object|null}
+     */
+    static _env(kubeconfig) {
+        if (kubeconfig === null || kubeconfig === undefined || kubeconfig === "") {
+            return null;
+        }
+        return { KUBECONFIG: kubeconfig };
+    }
+
+    /**
      * Get kubectl version.
      *
      * @param {String|undefined} context
+     * @param {String|undefined} kubeconfig - KUBECONFIG to target
      * @returns {Promise<String>}
      */
-    static async version(context) {
+    static async version(context, kubeconfig) {
         if (this._kubectlExe === null) {
             return "";
         }
@@ -48,7 +62,7 @@ export class Kubectl extends BaseKubectl {
         argv.push(`version`);
 
         try {
-            const output = await execCommunicateAsync(argv);
+            const output = await execCommunicateAsync(argv, null, null, this._env(kubeconfig));
             return output;
         } catch (_e) {
             //console.error(`${Kubectl._extensionUUID} cannot retrieve kubeconfig contexts: ${_e}`);
@@ -62,33 +76,37 @@ export class Kubectl extends BaseKubectl {
      * The kubectl version is the lightweight method to check reachability.
      *
      * @param {String|undefined} context
+     * @param {String|undefined} kubeconfig - KUBECONFIG to target
      * @returns {Promise<String>}
      */
-    static async clusterIsReachable(context) {
+    static async clusterIsReachable(context, kubeconfig) {
         if (this._kubectlExe === null) {
             return false;
         }
-        const v = await Kubectl.version(context);
+        const v = await Kubectl.version(context, kubeconfig);
         return v !== "";
     }
 
     /**
      * Get kubeconfg contexts
      *
+     * @param {String|undefined} kubeconfig - KUBECONFIG to target
+     * @param {boolean} [quiet] - suppress error notifications (used while probing files)
      * @returns {Promise<String[]>}
      */
-    static async getContexts() {
+    static async getContexts(kubeconfig, quiet = false) {
         if (this._kubectlExe === null) {
             return [];
         }
 
         const argv = [this._kubectlExe, 'config', 'get-contexts', '-oname'];
         try {
-            const output = await execCommunicateAsync(argv);
-            const lines = output.split('\n');
-            return lines;
+            const output = await execCommunicateAsync(argv, null, null, this._env(kubeconfig));
+            return output.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         } catch (e) {
-            Main.notifyError(this._extensionUUID, _(`cannot retrieve kubeconfig contexts: ${e}`));
+            if (!quiet) {
+                Main.notifyError(this._extensionUUID, _(`cannot retrieve kubeconfig contexts: ${e}`));
+            }
             return [];
         }
     }
@@ -96,18 +114,22 @@ export class Kubectl extends BaseKubectl {
     /**
      * Get kubeconfg current-context
      *
+     * @param {String|undefined} kubeconfig - KUBECONFIG to target
+     * @param {boolean} [quiet] - suppress error notifications (no current-context is normal)
      * @returns {Promise<string>}
      */
-    static async getCurrentContext() {
+    static async getCurrentContext(kubeconfig, quiet = false) {
         if (this._kubectlExe === null) {
             return "";
         }
 
         const argv = [this._kubectlExe, 'config', 'current-context'];
         try {
-            return await execCommunicateAsync(argv);
+            return await execCommunicateAsync(argv, null, null, this._env(kubeconfig));
         } catch (e) {
-            Main.notifyError(this._extensionUUID, _(`cannot retrieve current kubeconfig contexts: ${e}`));
+            if (!quiet) {
+                Main.notifyError(this._extensionUUID, _(`cannot retrieve current kubeconfig contexts: ${e}`));
+            }
             return "";
         }
     }
@@ -115,16 +137,18 @@ export class Kubectl extends BaseKubectl {
     /**
      * Set kubeconfg use-context
      *
-     * @param {Promise<boolean>} context
+     * @param {String} context
+     * @param {String|undefined} kubeconfig - KUBECONFIG to target
+     * @returns {Promise<boolean>}
      */
-    static async useContext(context) {
+    static async useContext(context, kubeconfig) {
         if (this._kubectlExe === null) {
             return false;
         }
 
         const argv = [this._kubectlExe, 'config', 'use-context', `${context}`];
         try {
-            await execCommunicateAsync(argv);
+            await execCommunicateAsync(argv, null, null, this._env(kubeconfig));
             return true;
         } catch (e) {
             Main.notifyError(this._extensionUUID, _(`cannot set kubeconfig context '${context}': ${e}`));

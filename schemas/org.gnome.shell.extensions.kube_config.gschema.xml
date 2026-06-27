@@ -11,5 +11,20 @@
             <summary>Seconds before next update</summary>
             <description>This is the seconds after extension updates the cluster reachability for the context</description>
         </key>
+        <key type="s" name="kubeconfig-dir">
+            <default>''</default>
+            <summary>Kubeconfig directory</summary>
+            <description>Directory scanned for kubeconfig files. Empty means ~/.kube. A leading ~ is expanded to the home directory.</description>
+        </key>
+        <key type="as" name="extra-kubeconfig-paths">
+            <default>[]</default>
+            <summary>Extra kubeconfig paths</summary>
+            <description>Additional kubeconfig files or directories to include, outside the main directory.</description>
+        </key>
+        <key type="b" name="sync-kubeconfig-env">
+            <default>true</default>
+            <summary>Keep terminals in sync</summary>
+            <description>Write the merged KUBECONFIG to ~/.config/environment.d so new terminals see the same contexts and current context. Takes effect after the next login.</description>
+        </key>
     </schema>
 </schemalist>

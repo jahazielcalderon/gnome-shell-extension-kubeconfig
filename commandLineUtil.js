@@ -14,12 +14,16 @@ Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
  * If given, @input will be passed to `stdin` and @cancellable can be used to
  * stop the process before it finishes.
  *
+ * If given, @env is a plain object of environment variables to overlay on top of
+ * the inherited environment (e.g. `{ KUBECONFIG: '/path/a:/path/b' }`).
+ *
  * @param {string[]} argv - a list of string arguments
  * @param {string} [input] - Input to write to `stdin` or %null to ignore
  * @param {Gio.Cancellable} [cancellable] - optional cancellable object
+ * @param {Object|null} [env] - environment variables to override, or %null to inherit as-is
  * @returns {Promise<string>} - The process output
  */
-export async function execCommunicateAsync(argv, input = null, cancellable = null) {
+export async function execCommunicateAsync(argv, input = null, cancellable = null, env = null) {
     let cancelId = 0;
     let flags = Gio.SubprocessFlags.STDOUT_PIPE |
         Gio.SubprocessFlags.STDERR_PIPE;
@@ -27,8 +31,19 @@ export async function execCommunicateAsync(argv, input = null, cancellable = nul
     if (input !== null)
         flags |= Gio.SubprocessFlags.STDIN_PIPE;
 
-    const proc = new Gio.Subprocess({ argv, flags });
-    proc.init(cancellable);
+    let proc;
+    if (env !== null) {
+        // Use a launcher so we can overlay env vars (e.g. KUBECONFIG) while
+        // inheriting the rest of gnome-shell's environment.
+        const launcher = new Gio.SubprocessLauncher({ flags });
+        for (const [key, value] of Object.entries(env)) {
+            launcher.setenv(key, value, true);
+        }
+        proc = launcher.spawnv(argv);
+    } else {
+        proc = new Gio.Subprocess({ argv, flags });
+        proc.init(cancellable);
+    }
 
     if (cancellable instanceof Gio.Cancellable)
         cancelId = cancellable.connect(() => proc.force_exit());

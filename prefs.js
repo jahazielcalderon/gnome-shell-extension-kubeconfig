@@ -33,6 +33,41 @@ export default class KubeConfigExtensionPreferences extends ExtensionPreferences
         window._settings.bind('show-current-context', row, 'active',
             Gio.SettingsBindFlags.DEFAULT);
 
+        // Kubeconfig sources: where to look for kubeconfig files
+        const groupSources = new Adw.PreferencesGroup({
+            title: _('Kubeconfig sources'),
+            description: _('Where to look for kubeconfig files'),
+        });
+        page.add(groupSources);
+
+        const dirRow = new Adw.EntryRow({
+            title: _('Kubeconfig directory (empty = ~/.kube)'),
+        });
+        groupSources.add(dirRow);
+        window._settings.bind('kubeconfig-dir', dirRow, 'text',
+            Gio.SettingsBindFlags.DEFAULT);
+
+        const extraRow = new Adw.EntryRow({
+            title: _('Extra files or directories (separated by ":")'),
+        });
+        groupSources.add(extraRow);
+        extraRow.set_text(window._settings.get_strv('extra-kubeconfig-paths').join(':'));
+        extraRow.connect('changed', () => {
+            const paths = extraRow.get_text()
+                .split(':')
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
+            window._settings.set_strv('extra-kubeconfig-paths', paths);
+        });
+
+        const syncRow = new Adw.SwitchRow({
+            title: _('Keep terminals in sync'),
+            subtitle: _('Export the merged KUBECONFIG via ~/.config/environment.d (applies after next login)'),
+        });
+        groupSources.add(syncRow);
+        window._settings.bind('sync-kubeconfig-env', syncRow, 'active',
+            Gio.SettingsBindFlags.DEFAULT);
+
         const groupInstrumentation = new Adw.PreferencesGroup({
             title: _('Instrumentation'),
             description: _('Configure extension tools'),

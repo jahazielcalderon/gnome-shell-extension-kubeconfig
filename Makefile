@@ -3,7 +3,7 @@ INSTALLNAME = kube_config@vvbogdanov87.gmail.com
 NAME = kube_config
 
 BASE_MODULES = extension.js metadata.json LICENSE README.md
-EXTRA_MODULES = kubeIndicator.js kubePopupMenuItem.js prefs.js kubectl.js commandLineUtil.js utils.js
+EXTRA_MODULES = kubeIndicator.js kubePopupMenuItem.js prefs.js kubectl.js commandLineUtil.js utils.js kubeconfigDiscovery.js
 
 clean:
 	rm -rf _build

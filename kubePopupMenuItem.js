@@ -14,14 +14,19 @@ export const KubePopupMenuItem = GObject.registerClass(
     class extends PopupMenu.PopupMenuItem {
         /**
          * @param {Extension} extensionObject
-         * @param {String} text
+         * @param {String} contextName - the kubectl context name
+         * @param {String} file - kubeconfig file this context lives in
+         * @param {String} kubeconfig - KUBECONFIG value to operate against (merge of all files)
          * @param {boolean} selected
          * @param {Object} params : PopupBaseMenuItem additional item properties (https://gjs.guide/extensions/topics/popup-menu.html#popupbasemenuitem)
          */
-        constructor(extensionObject, text, selected, params) {
-            super(text.trim(), params);
+        constructor(extensionObject, contextName, file, kubeconfig, selected, params) {
+            super(contextName.trim(), params);
             this._extensionObject = extensionObject;
             this._settings = this._extensionObject.getSettings();
+            this._contextName = contextName.trim();
+            this._file = file;
+            this._kubeconfig = kubeconfig;
 
             // TODO: How to know if item is already destroyed?
             this._destroyed = false;
@@ -36,7 +41,7 @@ export const KubePopupMenuItem = GObject.registerClass(
 
             // connect signals
             this.connect("activate", (_item, _event) => {
-                Kubectl.useContext(this.label.get_text());
+                Kubectl.useContext(this._contextName, this._kubeconfig);
             });
             this.connect('destroy', this._onDestroy.bind(this));
 
@@ -85,7 +90,7 @@ export const KubePopupMenuItem = GObject.registerClass(
             if (this._destroyed) {
                 return;
             }
-            const status = await Kubectl.clusterIsReachable(this.label.get_text());
+            const status = await Kubectl.clusterIsReachable(this._contextName, this._kubeconfig);
             if (this._destroyed) {
                 return;
             }
